@@ -33,4 +33,5 @@ public interface TrainingAttendanceRepository extends JpaRepository<TrainingAtte
     List<TrainingAttendance> findByTrainingSessionIdAndSessionDate(@Param("sessionId") Long sessionId, @Param("date") LocalDate date);
 
 
+
 }

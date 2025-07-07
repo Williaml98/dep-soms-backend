@@ -1053,6 +1053,27 @@ public class TrainingService {
                 .map(this::mapToTrainingAttendanceDTO)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<TrainingAttendanceResponseDTO> getAttendancesByDate(LocalDate date, Long sessionId) {
+        if (sessionId != null) {
+            // Get attendances for specific session and date
+            return trainingAttendanceRepository.findByTrainingSessionIdAndSessionDate(sessionId, date)
+                    .stream()
+                    .map(this::mapToTrainingAttendanceDTO)
+                    .collect(Collectors.toList());
+        } else {
+            // Get all attendances for the date (original behavior)
+            List<TrainingSession> sessions = trainingSessionRepository
+                    .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(date, date);
+
+            return sessions.stream()
+                    .flatMap(session -> trainingAttendanceRepository
+                            .findByTrainingSessionAndSessionDate(session, date).stream())
+                    .map(this::mapToTrainingAttendanceDTO)
+                    .collect(Collectors.toList());
+        }
+    }
     @Transactional
     public TrainingAttendanceResponseDTO updateTrainingAttendance(Long id, TrainingAttendanceUpdateDTO dto) {
         TrainingAttendance attendance = trainingAttendanceRepository.findById(id)

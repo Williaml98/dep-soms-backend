@@ -127,15 +127,7 @@ public class TrainingAttendanceController {
         System.out.println("DEBUG: [Controller] Received date: " + date + ", sessionId: " + sessionId);
 
         try {
-            List<TrainingAttendanceResponseDTO> attendances;
-            if (sessionId != null) {
-                System.out.println("DEBUG: [Controller] Calling service with sessionId: " + sessionId);
-                attendances = trainingService.getTrainingSessionAttendanceByDate(sessionId, date);
-            } else {
-                System.out.println("DEBUG: [Controller] Calling service for all sessions on date: " + date);
-                attendances = trainingService.getAttendancesByDate(date);
-            }
-
+            List<TrainingAttendanceResponseDTO> attendances = trainingService.getAttendancesByDate(date, sessionId);
             System.out.println("DEBUG: [Controller] Returning " + attendances.size() + " records");
             return ResponseEntity.ok(attendances);
         } catch (Exception e) {
