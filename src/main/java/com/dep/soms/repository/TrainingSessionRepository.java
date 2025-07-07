@@ -26,4 +26,6 @@ public interface TrainingSessionRepository extends JpaRepository<TrainingSession
     Optional<TrainingSession> findById(Long id);
     List<TrainingSession> findByStartDateAfter(LocalDate date);
     List<TrainingSession> findByStartDateBeforeAndEndDateAfter(LocalDate startBefore, LocalDate endAfter);
+
+    List<TrainingSession> findByStartDateLessThanEqualAndEndDateGreaterThanEqual(LocalDate endDate, LocalDate startDate);
 }

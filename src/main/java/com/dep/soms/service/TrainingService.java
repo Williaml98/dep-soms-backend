@@ -1029,17 +1029,30 @@ public class TrainingService {
                 .collect(Collectors.toList());
     }
 
+//    @Transactional(readOnly = true)
+//    public List<TrainingAttendanceResponseDTO> getTrainingSessionAttendanceByDate(Long sessionId, LocalDate date) {
+//        TrainingSession session = trainingSessionRepository.findById(sessionId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Training session not found with id: " + sessionId));
+//
+//        List<TrainingAttendance> attendances = trainingAttendanceRepository.findByTrainingSessionAndSessionDate(session, date);
+//        return attendances.stream()
+//                .map(this::mapToTrainingAttendanceDTO)
+//                .collect(Collectors.toList());
+//    }
+
     @Transactional(readOnly = true)
     public List<TrainingAttendanceResponseDTO> getTrainingSessionAttendanceByDate(Long sessionId, LocalDate date) {
-        TrainingSession session = trainingSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Training session not found with id: " + sessionId));
+        System.out.println("DEBUG: [Service] Fetching attendances for sessionId: " + sessionId + " and date: " + date);
 
-        List<TrainingAttendance> attendances = trainingAttendanceRepository.findByTrainingSessionAndSessionDate(session, date);
+        // Use the direct ID query method instead of fetching the session first
+        List<TrainingAttendance> attendances = trainingAttendanceRepository.findByTrainingSessionIdAndSessionDate(sessionId, date);
+
+        System.out.println("DEBUG: [Service] Found " + attendances.size() + " attendance records");
+
         return attendances.stream()
                 .map(this::mapToTrainingAttendanceDTO)
                 .collect(Collectors.toList());
     }
-
     @Transactional
     public TrainingAttendanceResponseDTO updateTrainingAttendance(Long id, TrainingAttendanceUpdateDTO dto) {
         TrainingAttendance attendance = trainingAttendanceRepository.findById(id)
@@ -1821,6 +1834,8 @@ public class TrainingService {
                 .collect(Collectors.toList());
     }
 
+
+
     @Transactional
     public List<TrainingSessionResponseDTO> getTrainingSessionsByTrainer(Long trainerId) {
         User trainer = userRepository.findById(trainerId)
@@ -1837,6 +1852,22 @@ public class TrainingService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<TrainingAttendanceResponseDTO> getAttendancesByDate(LocalDate date) {
+        // Get all sessions that have any occurrence on this date
+        List<TrainingSession> sessions = trainingSessionRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(date, date);
+
+        // Get all attendances for these sessions on the specific date
+        List<TrainingAttendance> attendances = sessions.stream()
+                .flatMap(session ->
+                        trainingAttendanceRepository.findByTrainingSessionAndSessionDate(session, date).stream()
+                )
+                .collect(Collectors.toList());
+
+        return attendances.stream()
+                .map(this::mapToTrainingAttendanceDTO)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     protected TrainingSessionResponseDTO mapToTrainingSessionDTO(TrainingSession session) {

@@ -8,11 +8,13 @@ import com.dep.soms.exception.ResourceNotFoundException;
 import com.dep.soms.service.TrainingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -107,4 +109,39 @@ public class TrainingAttendanceController {
             @RequestParam(required = false) Boolean passed) {
         return ResponseEntity.ok(trainingService.updateAttendanceScore(id, score, passed));
     }
+
+//    @GetMapping("/by-date/{date}")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('SUPERVISOR')")
+//    public ResponseEntity<List<TrainingAttendanceResponseDTO>> getAttendancesByDate(
+//            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+//
+//        return ResponseEntity.ok(trainingService.getAttendancesByDate(date));
+//    }
+
+    @GetMapping("/by-date/{date}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('SUPERVISOR')")
+    public ResponseEntity<List<TrainingAttendanceResponseDTO>> getAttendancesByDate(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Long sessionId) {
+
+        System.out.println("DEBUG: [Controller] Received date: " + date + ", sessionId: " + sessionId);
+
+        try {
+            List<TrainingAttendanceResponseDTO> attendances;
+            if (sessionId != null) {
+                System.out.println("DEBUG: [Controller] Calling service with sessionId: " + sessionId);
+                attendances = trainingService.getTrainingSessionAttendanceByDate(sessionId, date);
+            } else {
+                System.out.println("DEBUG: [Controller] Calling service for all sessions on date: " + date);
+                attendances = trainingService.getAttendancesByDate(date);
+            }
+
+            System.out.println("DEBUG: [Controller] Returning " + attendances.size() + " records");
+            return ResponseEntity.ok(attendances);
+        } catch (Exception e) {
+            System.out.println("ERROR: [Controller] " + e.getMessage());
+            throw e;
+        }
+    }
+
 }

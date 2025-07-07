@@ -6,6 +6,7 @@ import com.dep.soms.model.TrainingRecord;
 import com.dep.soms.model.TrainingSession;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -27,5 +28,9 @@ public interface TrainingAttendanceRepository extends JpaRepository<TrainingAtte
 
     Optional<TrainingAttendance> findByTrainingSessionAndPersonRegistrationAndSessionDate(
             TrainingSession session, PersonRegistration personRegistration, LocalDate sessionDate);
+
+    @Query("SELECT ta FROM TrainingAttendance ta WHERE ta.trainingSession.id = :sessionId AND ta.sessionDate = :date")
+    List<TrainingAttendance> findByTrainingSessionIdAndSessionDate(@Param("sessionId") Long sessionId, @Param("date") LocalDate date);
+
 
 }

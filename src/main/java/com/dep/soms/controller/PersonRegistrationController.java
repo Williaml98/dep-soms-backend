@@ -63,20 +63,20 @@ public class PersonRegistrationController {
 
     // Basic endpoints
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR', 'SUPERVISOR')")
     public ResponseEntity<PersonRegistrationResponseDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(personRegistrationService.findById(id));
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR','SUPERVISOR')")
     public ResponseEntity<Page<PersonRegistrationSummaryDTO>> getAll(Pageable pageable) {
         return ResponseEntity.ok(personRegistrationService.findAll(pageable));
     }
 
     // Search endpoints
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR', 'SUPERVISOR')")
     public ResponseEntity<Page<PersonRegistrationSummaryDTO>> search(
             @RequestParam String term,
             Pageable pageable) {
@@ -93,7 +93,7 @@ public class PersonRegistrationController {
 
     // Document expiry endpoint - Only Admin and Manager
     @GetMapping("/expiring-documents")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR', 'SUPERVISOR')")
     public ResponseEntity<List<PersonRegistrationSummaryDTO>> getExpiringDocuments(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
@@ -109,7 +109,7 @@ public class PersonRegistrationController {
 
     // Status update endpoints - Admin and Manager only
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR', 'SUPERVISOR')")
     public ResponseEntity<Void> updateStatus(
             @PathVariable Long id,
             @RequestParam RegistrationStatus status,
