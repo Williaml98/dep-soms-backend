@@ -150,6 +150,13 @@ public class ShiftAssignmentController {
         }
     }
 
-
+    @GetMapping("/guard/{guardId}/today")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('GUARD')")
+    public ResponseEntity<List<ShiftAssignmentDto>> getTodaysShiftAssignmentsByGuardId(
+            @PathVariable Long guardId) {
+        LocalDate today = LocalDate.now();
+        List<ShiftAssignmentDto> assignments = shiftAssignmentService.getShiftAssignmentsByGuardId(guardId, today, today);
+        return ResponseEntity.ok(assignments);
+    }
 
 }

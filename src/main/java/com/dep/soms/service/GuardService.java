@@ -255,7 +255,6 @@ public class GuardService {
     // Add to GuardService.java
 
     // In GuardService.java
-    // In GuardService.java
     @Transactional(readOnly = true)
     public List<GuardDto> getGuardsByClientId(Long clientId) {
         List<Guard> guards = guardRepository.findGuardsByClientId(clientId);
@@ -287,8 +286,6 @@ public class GuardService {
 
     @Transactional(readOnly = true)
     public GuardDto getGuardByUserId(Long userId) {
-        // Implementation to find guard by user ID
-        // This depends on your data model structure
         Guard guard = guardRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Guard not found for user ID: " + userId));
         return mapGuardToDto(guard);
