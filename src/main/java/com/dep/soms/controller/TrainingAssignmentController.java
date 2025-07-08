@@ -19,7 +19,7 @@ public class TrainingAssignmentController {
     private final TrainingService trainingService;
 
 //    @PostMapping
-//    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
 //    public ResponseEntity<List<TrainingAttendanceResponseDTO>> assignRecruitsToSession(
 //            @RequestParam Long sessionId,
 //            @RequestBody List<Long> recruitIds) {
@@ -30,7 +30,7 @@ public class TrainingAssignmentController {
 //    }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingAttendanceResponseDTO>> assignRecruitsToSession(
             @RequestBody TrainingAssignmentRequestDTO request) {
         return new ResponseEntity<>(
@@ -40,14 +40,14 @@ public class TrainingAssignmentController {
     }
 
     @GetMapping("/by-session/{sessionId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingAttendanceResponseDTO>> getAssignmentsBySession(
             @PathVariable Long sessionId) {
         return ResponseEntity.ok(trainingService.getAttendancesBySession(sessionId));
     }
 
     @GetMapping("/by-recruit/{recruitId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingAttendanceResponseDTO>> getAssignmentsByRecruit(
             @PathVariable Long recruitId) {
         return ResponseEntity.ok(trainingService.getAttendancesByPerson(recruitId));

@@ -18,33 +18,33 @@ public class TrainingCertificationController {
     private final TrainingService trainingService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('HR')")
     public ResponseEntity<List<TrainingCertificationResponseDTO>> getAllTrainingCertifications() {
         return ResponseEntity.ok(trainingService.getAllTrainingCertifications());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('HR')")
     public ResponseEntity<TrainingCertificationResponseDTO> getTrainingCertificationById(@PathVariable Long id) {
         return ResponseEntity.ok(trainingService.getTrainingCertificationById(id));
     }
 
     @GetMapping("/by-record/{recordId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('HR')")
     public ResponseEntity<List<TrainingCertificationResponseDTO>> getTrainingCertificationsByRecord(
             @PathVariable Long recordId) {
         return ResponseEntity.ok(trainingService.getTrainingCertificationsByRecord(recordId));
     }
 
     @GetMapping("/by-person/{personId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('HR')")
     public ResponseEntity<List<TrainingCertificationResponseDTO>> getTrainingCertificationsByPerson(
             @PathVariable Long personId) {
         return ResponseEntity.ok(trainingService.getTrainingCertificationsByPerson(personId));
     }
 
     @GetMapping("/by-certification/{certificationId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('TRAINER') or hasRole('HR')")
     public ResponseEntity<List<TrainingCertificationResponseDTO>> getTrainingCertificationsByCertification(
             @PathVariable Long certificationId) {
         return ResponseEntity.ok(trainingService.getTrainingCertificationsByCertification(certificationId));
@@ -57,7 +57,7 @@ public class TrainingCertificationController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<Void> deleteTrainingCertification(@PathVariable Long id) {
         trainingService.deleteTrainingCertification(id);
         return ResponseEntity.noContent().build();

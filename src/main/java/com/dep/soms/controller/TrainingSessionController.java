@@ -26,26 +26,26 @@ public class TrainingSessionController {
     private final TrainingService trainingService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingSessionResponseDTO>> getAllTrainingSessions() {
         return ResponseEntity.ok(trainingService.getAllTrainingSessions());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR') ")
     public ResponseEntity<TrainingSessionResponseDTO> getTrainingSessionById(@PathVariable Long id) {
         return ResponseEntity.ok(trainingService.getTrainingSessionById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<TrainingSessionResponseDTO> createTrainingSession(
             @Valid @RequestBody TrainingSessionCreateDTO trainingSessionDTO) {
         return new ResponseEntity<>(trainingService.createTrainingSession(trainingSessionDTO), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<TrainingSessionResponseDTO> updateTrainingSession(
             @PathVariable Long id,
             @Valid @RequestBody TrainingSessionCreateDTO trainingSessionDTO) {
@@ -53,14 +53,14 @@ public class TrainingSessionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<Void> deleteTrainingSession(@PathVariable Long id) {
         trainingService.deleteTrainingSession(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<TrainingSessionResponseDTO> updateTrainingSessionStatus(
             @PathVariable Long id,
             @RequestParam TrainingSession.TrainingStatus status) {
@@ -68,19 +68,19 @@ public class TrainingSessionController {
     }
 
     @GetMapping("/upcoming")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingSessionResponseDTO>> getUpcomingTrainingSessions() {
         return ResponseEntity.ok(trainingService.getUpcomingTrainingSessions());
     }
 
     @GetMapping("/by-trainer/{trainerId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingSessionResponseDTO>> getTrainingSessionsByTrainer(@PathVariable Long trainerId) {
         return ResponseEntity.ok(trainingService.getTrainingSessionsByTrainer(trainerId));
     }
 
     @GetMapping("/by-status/{status}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingSessionResponseDTO>> getTrainingSessionsByStatus(
             @PathVariable TrainingSession.TrainingStatus status) {
         return ResponseEntity.ok(trainingService.getTrainingSessionsByStatus(status));
@@ -90,7 +90,7 @@ public class TrainingSessionController {
 
 
     @PostMapping("/{sessionId}/recruits")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingAttendanceResponseDTO>> assignRecruitsToTrainingSession(
             @PathVariable Long sessionId, @RequestBody List<Long> recruitIds) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -98,13 +98,13 @@ public class TrainingSessionController {
     }
 
     @GetMapping("/{sessionId}/attendance")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingAttendanceResponseDTO>> getTrainingSessionAttendance(@PathVariable Long sessionId) {
         return ResponseEntity.ok(trainingService.getTrainingSessionAttendance(sessionId));
     }
 
     @GetMapping("/{sessionId}/attendance/date/{date}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingAttendanceResponseDTO>> getTrainingSessionAttendanceByDate(
             @PathVariable Long sessionId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -112,7 +112,7 @@ public class TrainingSessionController {
     }
 
     @PutMapping("/attendance/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<TrainingAttendanceResponseDTO> updateTrainingAttendance(
             @PathVariable Long id, @RequestBody TrainingAttendanceUpdateDTO dto) {
         return ResponseEntity.ok(trainingService.updateTrainingAttendance(id, dto));
@@ -120,7 +120,7 @@ public class TrainingSessionController {
 
 
     @GetMapping("/ongoing")
-    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TRAINING_MANAGER', 'TRAINER') or hasRole('SUPERVISOR') or hasRole('HR')")
     public ResponseEntity<List<TrainingSessionResponseDTO>> getOngoingTrainingSessions() {
         return ResponseEntity.ok(trainingService.getOngoingTrainingSessions());
     }

@@ -102,7 +102,7 @@ public class PersonRegistrationController {
 
     // Dashboard statistics - Admin only
     @GetMapping("/stats/registration")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'HR', 'SUPERVISOR')")
     public ResponseEntity<Map<RegistrationStatus, Long>> getRegistrationStats() {
         return ResponseEntity.ok(personRegistrationService.getRegistrationStatusCounts());
     }
