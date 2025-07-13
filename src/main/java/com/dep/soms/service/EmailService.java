@@ -322,6 +322,24 @@ public class EmailService {
         sendSimpleEmail(to, subject, body);
     }
 
+    // Add this method to your EmailService class
+    public void sendPasswordResetEmail(String email, String firstName, String lastName, String newPassword) {
+        String subject = "Password Reset - SOMS Security System";
+        String text = String.format(
+                "Dear %s %s,\n\n" +
+                        "Your password has been reset as requested.\n\n" +
+                        "Your new temporary password is: %s\n\n" +
+                        "IMPORTANT SECURITY NOTICE:\n" +
+                        "- Please log in immediately and change this password\n" +
+                        "- This temporary password should only be used once\n" +
+                        "- Do not share this password with anyone\n" +
+                        "- For security reasons, please change it as soon as you log in\n\n" +
+                        "If you did not request this password reset, please contact our support team immediately.\n\n" +
+                        "Regards,\nSOMS Security Team",
+                firstName, lastName, newPassword
+        );
+        sendSimpleEmail(email, subject, text);
+    }
 
 
 }

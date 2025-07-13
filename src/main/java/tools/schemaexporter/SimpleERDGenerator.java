@@ -169,7 +169,8 @@ public class SimpleERDGenerator {
             // Database connection details
             String url = "jdbc:postgresql://localhost:5432/soms";
             String user = "postgres";
-            String password = "1974";
+//            String password = "1974";
+            String password = "K100921Z";
 
             // Output file for the ERD image
             String outputFile = "C:/Users/William/Downloads/backup/erd_diagram.png";

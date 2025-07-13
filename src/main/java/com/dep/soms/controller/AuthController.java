@@ -154,6 +154,7 @@ import com.dep.soms.repository.UserRepository;
 import com.dep.soms.security.jwt.JwtUtils;
 import com.dep.soms.security.services.UserDetailsImpl;
 
+import com.dep.soms.service.EmailService;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,6 +168,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.security.SecureRandom;
+import java.util.Optional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -192,6 +195,9 @@ public class AuthController {
 
     @Autowired
     JwtUtils jwtUtils;
+
+    @Autowired
+    private EmailService emailService;
 
     // LOGIN
 
@@ -453,6 +459,110 @@ public class AuthController {
                     "message", e.getMessage()
             ));
         }
+    }
+
+
+    // LOGOUT endpoint
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String jwt = authHeader.substring(7);
+
+                // Validate the token first
+                if (!jwtUtils.validateJwtToken(jwt)) {
+                    return ResponseEntity.status(401).body(Map.of(
+                            "message", "Invalid token"
+                    ));
+                }
+
+                // Clear security context
+                SecurityContextHolder.clearContext();
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Logout successful",
+                        "success", true
+                ));
+            }
+
+            return ResponseEntity.status(401).body(Map.of(
+                    "message", "No token provided"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "message", "Logout failed",
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+    // RESET PASSWORD endpoint
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "message", "Email is required"
+                ));
+            }
+
+            // Find user by email
+            Optional<User> userOptional = userRepository.findByEmail(email);
+
+            if (!userOptional.isPresent()) {
+                // Don't reveal if email exists or not for security
+                return ResponseEntity.ok(Map.of(
+                        "message", "If the email exists in our system, a new password has been sent to it.",
+                        "success", true
+                ));
+            }
+
+            User user = userOptional.get();
+
+            // Generate new temporary password
+            String newPassword = generateTemporaryPassword();
+
+            // Update user password in database
+            user.setPassword(encoder.encode(newPassword));
+            userRepository.save(user);
+
+            // Send email with new password
+            emailService.sendPasswordResetEmail(
+                    user.getEmail(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    newPassword
+            );
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "If the email exists in our system, a new password has been sent to it.",
+                    "success", true
+            ));
+
+        } catch (Exception e) {
+            System.out.println("Password reset failed: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "message", "Password reset failed. Please try again later.",
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+    // Helper method to generate temporary password
+    private String generateTemporaryPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        SecureRandom random = new SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        // Generate 12 character password
+        for (int i = 0; i < 12; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+
+        return password.toString();
     }
 
 }

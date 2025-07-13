@@ -14,14 +14,15 @@ public class CompleteERDGenerator {
     public static void main(String[] args) {
         try {
             // Output directory for the ERD and documentation
-            String outputDir = "C:/Users/William/Downloads/backup/erd";
-
+//            String outputDir = "C:/Users/William/Downloads/backup/erd";
+            String outputDir = "C:\\Users\\kzibi\\william-personal-projects";
             // Database connection details
             String dbHost = "localhost";
             String dbPort = "5432";
             String dbName = "soms";
             String dbUser = "postgres";
-            String dbPassword = "1974";
+//            String dbPassword = "1974";
+            String dbPassword = "K100921Z";
 
             // Create output directory if it doesn't exist
             File outputDirectory = new File(outputDir);
