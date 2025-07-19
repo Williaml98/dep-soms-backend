@@ -28,4 +28,15 @@ public interface TrainingSessionRepository extends JpaRepository<TrainingSession
     List<TrainingSession> findByStartDateBeforeAndEndDateAfter(LocalDate startBefore, LocalDate endAfter);
 
     List<TrainingSession> findByStartDateLessThanEqualAndEndDateGreaterThanEqual(LocalDate endDate, LocalDate startDate);
+
+    List<TrainingSession> findByStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(
+            LocalDate startDate,
+            LocalDate endDate,
+            TrainingSession.TrainingStatus status
+    );
+
+    List<TrainingSession> findByEndDateBeforeAndStatus(
+            LocalDate endDate,
+            TrainingSession.TrainingStatus status
+    );
 }
