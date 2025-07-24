@@ -79,7 +79,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Service
@@ -339,6 +341,39 @@ public class EmailService {
                 firstName, lastName, newPassword
         );
         sendSimpleEmail(email, subject, text);
+    }
+
+    /**
+     * Sends patrol assignment notification to supervisor
+     */
+    public void sendPatrolAssignmentEmail(String toEmail, String fullName, String siteName,
+                                          LocalDateTime startTime, LocalDateTime endTime, String notes) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("New Patrol Assignment - " + siteName);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy hh:mm a");
+
+        String emailContent = String.format(
+                "Hello %s,\n\n" +
+                        "You have been assigned a new patrol at %s.\n\n" +
+                        "Patrol Details:\n" +
+                        "Start Time: %s\n" +
+                        "End Time: %s\n\n" +
+                        "Notes: %s\n\n" +
+                        "Checkpoints will be available in the web app once you start the patrol.\n\n" +
+                        "Please log in to the system to view complete details.\n\n" +
+                        "Best regards,\n" +
+                        "Security Operations Management System",
+                fullName,
+                siteName,
+                startTime.format(formatter),
+                endTime.format(formatter),
+                notes != null ? notes : "None"
+        );
+
+        message.setText(emailContent);
+        emailSender.send(message);
     }
 
 
