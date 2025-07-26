@@ -183,6 +183,29 @@ public class DataLoader implements CommandLineRunner {
             System.out.println("Supervisor user already exists");
         }
 
+        // Create Supervisor2 user if it doesn't exist
+        if (!userRepository.existsByUsername("supervisor2")) {
+            User supervisor = new User();
+            supervisor.setUsername("supervisor2");
+            supervisor.setEmail("supervisor2@soms.com");
+            supervisor.setPassword(passwordEncoder.encode("supervisor123"));
+            supervisor.setFirstName("Supervisor2");
+            supervisor.setLastName("User2");
+            supervisor.setActive(true);
+            supervisor.setCreatedAt(LocalDateTime.now());
+
+            Set<Role> roles = new HashSet<>();
+            Role hrRole = roleRepository.findByName(Role.ERole.ROLE_SUPERVISOR)
+                    .orElseThrow(() -> new RuntimeException("Error: Supervisor Role is not found."));
+            roles.add(hrRole);
+            supervisor.setRoles(roles);
+
+            User savedHr = userRepository.save(supervisor);
+            System.out.println("Supervisor user created successfully with ID: " + savedHr.getId());
+        } else {
+            System.out.println("Supervisor user already exists");
+        }
+
         // Create Manager user if it doesn't exist
         if (!userRepository.existsByUsername("manager")) {
             User manager = new User();

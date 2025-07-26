@@ -1,8 +1,6 @@
 package com.dep.soms.dto.patrol;
 
-import com.dep.soms.model.Patrol;
 import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -12,14 +10,24 @@ import java.util.List;
 @AllArgsConstructor
 public class PatrolDto {
     private Long id;
+    private String name;
+    private String description;
     private Long supervisorId;
     private String supervisorName;
-    private Long siteId;
-    private String siteName;
+    private Long primarySiteId;
+    private String primarySiteName;
+    private List<Long> siteIds;
+    private List<String> siteNames;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private Patrol.PatrolStatus status;
+    private LocalDateTime actualStartTime;
+    private LocalDateTime actualEndTime;
+    private String patrolType;
+    private Integer requiredSupervisors;
+    private String colorCode;
+    private String status;
     private String notes;
+    private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<CheckpointDto> checkpoints;
@@ -35,9 +43,9 @@ public class PatrolDto {
         private LocalDateTime checkTime;
         private Double latitude;
         private Double longitude;
-        private Double expectedLatitude;
-        private Double expectedLongitude;
         private String notes;
         private String photoPath;
+        private Double expectedLatitude;
+        private Double expectedLongitude;
     }
 }

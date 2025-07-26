@@ -2,7 +2,7 @@ package com.dep.soms.dto.patrol;
 
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -10,9 +10,16 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CreatePatrolRequest {
-    private Long supervisorId;
+    private String name;
+    private String description;
+    private String startTime; // Format: "HH:mm"
+    private String endTime;   // Format: "HH:mm"
+    private Long primarySiteId;
     private List<Long> siteIds;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private Long supervisorId;
+    private String patrolType;
+    private Integer requiredSupervisors;
+    private String colorCode;
     private String notes;
+    private Boolean active;
 }

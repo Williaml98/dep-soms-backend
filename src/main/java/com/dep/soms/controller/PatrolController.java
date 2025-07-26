@@ -31,27 +31,6 @@ public class PatrolController {
         return ResponseEntity.ok(patrols);
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
-    public ResponseEntity<PatrolDto> getPatrolById(@PathVariable Long id) {
-        PatrolDto patrol = patrolService.getPatrolById(id);
-        return ResponseEntity.ok(patrol);
-    }
-
-    @GetMapping("/supervisor/{supervisorId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('SUPERVISOR')")
-    public ResponseEntity<List<PatrolDto>> getPatrolsBySupervisorId(@PathVariable Long supervisorId) {
-        List<PatrolDto> patrols = patrolService.getPatrolsBySupervisorId(supervisorId);
-        return ResponseEntity.ok(patrols);
-    }
-
-    @GetMapping("/active")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<List<PatrolDto>> getActivePatrols() {
-        List<PatrolDto> patrols = patrolService.getActivePatrols();
-        return ResponseEntity.ok(patrols);
-    }
-
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ResponseEntity<PatrolDto> createPatrol(@Valid @RequestBody CreatePatrolRequest request) {
@@ -111,21 +90,6 @@ public class PatrolController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/site/{siteId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER') or hasRole('CLIENT')")
-    public ResponseEntity<List<PatrolDto>> getPatrolsBySiteId(@PathVariable Long siteId) {
-        List<PatrolDto> patrols = patrolService.getPatrolsBySiteId(siteId);
-        return ResponseEntity.ok(patrols);
-    }
-
-    @GetMapping("/time-range")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<List<PatrolDto>> getPatrolsByTimeRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        List<PatrolDto> patrols = patrolService.getPatrolsByTimeRange(start, end);
-        return ResponseEntity.ok(patrols);
-    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleException(Exception e) {
