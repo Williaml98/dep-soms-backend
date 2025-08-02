@@ -1,6 +1,7 @@
 package com.dep.soms.controller;
 
 import com.dep.soms.dto.patrol.*;
+import com.dep.soms.service.PatrolAssignmentService;
 import com.dep.soms.service.PatrolService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -22,6 +23,9 @@ public class PatrolController {
     @Autowired
     private PatrolService patrolService;
 
+    @Autowired
+    private PatrolAssignmentService patrolAssignmentService;
+
     private static final Logger logger = LoggerFactory.getLogger(PatrolController.class);
 
     @GetMapping("/all")
@@ -38,17 +42,17 @@ public class PatrolController {
         return ResponseEntity.ok(patrol);
     }
 
-    @PostMapping("/bulk-create")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<BulkPatrolResponse> createBulkPatrols(@Valid @RequestBody BulkPatrolRequest request) {
-        BulkPatrolResponse response = patrolService.createBulkPatrols(request);
-
-        if (response.getErrors().isEmpty()) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(response);
-        }
-    }
+//    @PostMapping("/bulk-create")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+//    public ResponseEntity<BulkPatrolResponse> createBulkPatrols(@Valid @RequestBody BulkPatrolRequest request) {
+//        BulkPatrolResponse response = patrolService.createBulkPatrols(request);
+//
+//        if (response.getErrors().isEmpty()) {
+//            return ResponseEntity.ok(response);
+//        } else {
+//            return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(response);
+//        }
+//    }
 
     @PostMapping("/{id}/start")
     @PreAuthorize("hasRole('SUPERVISOR')")
@@ -97,4 +101,45 @@ public class PatrolController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("An error occurred: " + e.getMessage());
     }
+
+
+    @PostMapping("/assign")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ResponseEntity<PatrolAssignmentDto> assignSupervisorToPatrol(
+            @Valid @RequestBody CreatePatrolAssignmentRequest request) {
+        PatrolAssignmentDto assignment = patrolAssignmentService.createAssignment(request);
+        return ResponseEntity.ok(assignment);
+    }
+
+//    @PostMapping("/bulk-assign")
+    @PostMapping("/bulk-create")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ResponseEntity<BulkPatrolAssignmentResponse> bulkAssignSupervisorsToPatrol(
+            @Valid @RequestBody BulkPatrolAssignmentRequest request) {
+        BulkPatrolAssignmentResponse response = patrolAssignmentService.createBulkPatrolAssignments(request);
+
+        if (response.getErrors().isEmpty()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(response);
+        }
+    }
+
+    //@PostMapping("/assignments/{assignmentId}/accept")
+//    @PreAuthorize("hasRole('SUPERVISOR')")
+//    public ResponseEntity<PatrolAssignmentDto> acceptAssignment(
+//            @PathVariable Long assignmentId) {
+//        PatrolAssignmentDto assignment = patrolAssignmentService.acceptAssignment(assignmentId);
+//        return ResponseEntity.ok(assignment);
+//    }
+//
+//    @PostMapping("/assignments/{assignmentId}/decline")
+//    @PreAuthorize("hasRole('SUPERVISOR')")
+//    public ResponseEntity<PatrolAssignmentDto> declineAssignment(
+//            @PathVariable Long assignmentId,
+//            @RequestParam String reason) {
+//        PatrolAssignmentDto assignment = patrolAssignmentService.declineAssignment(assignmentId, reason);
+//        return ResponseEntity.ok(assignment);
+//    }
+
 }

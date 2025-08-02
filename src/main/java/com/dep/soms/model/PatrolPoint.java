@@ -7,6 +7,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+
 @Getter
 @Setter
 @Entity
@@ -36,6 +38,9 @@ public class PatrolPoint {
 
     @Column(name = "nfc_tag")
     private String nfcTag;
+
+    @Column(name = "expected_check_time")
+    private LocalTime expectedCheckTime;
 
     @Column(name = "latitude")
     private Double latitude;

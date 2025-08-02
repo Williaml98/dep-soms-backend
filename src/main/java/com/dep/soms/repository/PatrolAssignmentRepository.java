@@ -1,5 +1,6 @@
 package com.dep.soms.repository;
 
+import com.dep.soms.model.Patrol;
 import com.dep.soms.model.PatrolAssignment;
 import com.dep.soms.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,4 +35,46 @@ public interface PatrolAssignmentRepository extends JpaRepository<PatrolAssignme
     List<PatrolAssignment> findBySupervisorId(Long supervisorId);
 
     List<PatrolAssignment> findByStatus(PatrolAssignment.PatrolAssignmentStatus status);
+    List<PatrolAssignment> findBySupervisorAndStartTimeBetween(User supervisor, LocalDateTime start, LocalDateTime end);
+
+    // Find assignment by patrol and supervisor
+    Optional<PatrolAssignment> findByPatrolIdAndSupervisorId(Long patrolId, Long supervisorId);
+
+    // Find assignments for a supervisor between two dates
+    //List<PatrolAssignment> findBySupervisorAndStartTimeBetween(User supervisor, LocalDateTime start, LocalDateTime end);
+
+    // Find assignments for a supervisor after a specific date
+    List<PatrolAssignment> findBySupervisorAndStartTimeGreaterThanEqual(User supervisor, LocalDateTime start);
+
+    // Find assignments for a supervisor before a specific date
+    List<PatrolAssignment> findBySupervisorAndStartTimeLessThanEqual(User supervisor, LocalDateTime end);
+
+    // Find assignments for a specific site between two dates
+    List<PatrolAssignment> findByPatrol_PrimarySite_IdAndStartTimeBetween(Long siteId, LocalDateTime start, LocalDateTime end);
+
+    // Find assignments for a specific site after a specific date
+    List<PatrolAssignment> findByPatrol_PrimarySite_IdAndStartTimeGreaterThanEqual(Long siteId, LocalDateTime start);
+
+    // Find assignments for a specific site before a specific date
+    List<PatrolAssignment> findByPatrol_PrimarySite_IdAndStartTimeLessThanEqual(Long siteId, LocalDateTime end);
+
+    // Find all assignments between two dates
+    List<PatrolAssignment> findByStartTimeBetween(LocalDateTime start, LocalDateTime end);
+
+    // Find assignments by supervisor
+//    List<PatrolAssignment> findBySupervisor(User supervisor);
+//
+//    // Find current in-progress assignments for a supervisor
+//    List<PatrolAssignment> findBySupervisorAndStatus(User supervisor, PatrolAssignment.PatrolAssignmentStatus status);
+//
+//    // Find assignment by patrol and supervisor
+//    Optional<PatrolAssignment> findByPatrolIdAndSupervisorId(Long patrolId, Long supervisorId);
+
+    List<PatrolAssignment> findBySupervisorAndAssignmentDateBetween(User supervisor, LocalDate startDate, LocalDate endDate);
+    List<PatrolAssignment> findBySupervisorAndAssignmentDateGreaterThanEqual(User supervisor, LocalDate date);
+    List<PatrolAssignment> findBySupervisorAndAssignmentDateLessThanEqual(User supervisor, LocalDate date);
+   // List<PatrolAssignment> findBySupervisor(User supervisor);
+    List<PatrolAssignment> findByPatrolAndAssignmentDate(Patrol patrol, LocalDate date);
+    List<PatrolAssignment> findByPatrol(Patrol patrol);
+    Optional<PatrolAssignment> findByPatrolIdAndSupervisorIdAndAssignmentDate(Long patrolId, Long supervisorId, LocalDate assignmentDate);
 }

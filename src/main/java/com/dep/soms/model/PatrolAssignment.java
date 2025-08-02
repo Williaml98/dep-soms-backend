@@ -1,11 +1,13 @@
 package com.dep.soms.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -58,6 +60,10 @@ public class PatrolAssignment {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Column(nullable = false)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate assignmentDate;
 
     @Column(name = "notes", length = 2000)
     private String notes;

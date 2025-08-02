@@ -3,6 +3,7 @@ package com.dep.soms.controller;
 import com.dep.soms.dto.patrol.*;
 import com.dep.soms.model.Patrol;
 import com.dep.soms.service.PatrolAssignmentQueryService;
+import com.dep.soms.service.PatrolAssignmentService;
 import com.dep.soms.service.PatrolService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -24,6 +25,9 @@ import java.util.stream.Collectors;
 public class PatrolAssignmentController {
     @Autowired
     private PatrolService patrolService;
+
+    @Autowired
+    private PatrolAssignmentService patrolAssignmentService;
 
     private static final Logger logger = LoggerFactory.getLogger(PatrolAssignmentController.class);
 
@@ -124,23 +128,43 @@ public class PatrolAssignmentController {
     }
 
 
+//    @PostMapping("/assign")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+//    public ResponseEntity<PatrolAssignmentDto> createAssignment(@Valid @RequestBody CreatePatrolAssignmentRequest request) {
+//        PatrolAssignmentDto assignment = patrolService.createAssignment(request);
+//        return ResponseEntity.ok(assignment);
+//    }
+
+//    @PostMapping("/bulk-create")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+//    public ResponseEntity<BulkPatrolAssignmentResponse> createBulkAssignments(
+//            @Valid @RequestBody BulkPatrolAssignmentRequest request) {
+//        BulkPatrolAssignmentResponse response = patrolService.createBulkPatrolAssignments(request);
+//
+//        if (response.getErrors().isEmpty()) {
+//            return ResponseEntity.ok(response);
+//        } else if (response.getCreatedAssignments().isEmpty()) {
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+//        } else {
+//            return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(response);
+//        }
+//    }
+
     @PostMapping("/assign")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<PatrolAssignmentDto> createAssignment(@Valid @RequestBody CreatePatrolAssignmentRequest request) {
-        PatrolAssignmentDto assignment = patrolService.createAssignment(request);
+    public ResponseEntity<PatrolAssignmentDto> assignSupervisorToPatrol(
+            @Valid @RequestBody CreatePatrolAssignmentRequest request) {
+        PatrolAssignmentDto assignment = patrolAssignmentService.createAssignment(request);
         return ResponseEntity.ok(assignment);
     }
-
     @PostMapping("/bulk-create")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<BulkPatrolAssignmentResponse> createBulkAssignments(
+    public ResponseEntity<BulkPatrolAssignmentResponse> bulkAssignSupervisorsToPatrol(
             @Valid @RequestBody BulkPatrolAssignmentRequest request) {
-        BulkPatrolAssignmentResponse response = patrolService.createBulkPatrolAssignments(request);
+        BulkPatrolAssignmentResponse response = patrolAssignmentService.createBulkPatrolAssignments(request);
 
         if (response.getErrors().isEmpty()) {
             return ResponseEntity.ok(response);
-        } else if (response.getCreatedAssignments().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         } else {
             return ResponseEntity.status(HttpStatus.MULTI_STATUS).body(response);
         }

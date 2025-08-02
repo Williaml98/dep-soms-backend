@@ -1,23 +1,21 @@
-
 package com.dep.soms.dto.patrol;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreatePatrolAssignmentRequest {
-    private Long patrolId;
+public class UpdatePatrolAssignmentRequest {
     private Long supervisorId;
     private LocalDate assignmentDate;
-
-    private LocalTime startTime;  // Optional - will use patrol's start time if null
+    private LocalTime startTime;
     private LocalTime endTime;
-
     private String notes;
-
+    private String status;
 }

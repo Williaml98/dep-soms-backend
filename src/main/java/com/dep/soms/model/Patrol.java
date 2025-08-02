@@ -245,6 +245,7 @@ public class Patrol {
         EVENING,
         NIGHT,
         WEEKEND,
-        CUSTOM
+        CUSTOM,
+        DAY
     }
 }

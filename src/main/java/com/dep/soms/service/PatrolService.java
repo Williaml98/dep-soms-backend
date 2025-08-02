@@ -14,6 +14,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -68,9 +69,9 @@ public class PatrolService {
             throw new IllegalArgumentException("Primary site is required");
         }
 
-        // Parse times
-        LocalTime startTime = LocalTime.parse(request.getStartTime());
-        LocalTime endTime = LocalTime.parse(request.getEndTime());
+        // Parse times - handle both ISO datetime and time-only formats
+        LocalTime startTime = parseTimeFromString(request.getStartTime());
+        LocalTime endTime = parseTimeFromString(request.getEndTime());
 
         // Combine with current date
         LocalDateTime startDateTime = LocalDateTime.of(LocalDate.now(), startTime);
@@ -97,24 +98,12 @@ public class PatrolService {
             throw new ResourceNotFoundException("One or more sites not found");
         }
 
-        // Get supervisor if provided
-        User supervisor = null;
-        if (request.getSupervisorId() != null) {
-            supervisor = userRepository.findById(request.getSupervisorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Supervisor not found with id: " + request.getSupervisorId()));
-
-            if (!isSupervisor(supervisor)) {
-                throw new IllegalArgumentException("User is not a supervisor");
-            }
-        }
-
-        // Create patrol
+        // Create patrol first
         Patrol patrol = Patrol.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .primarySite(primarySite)
                 .sites(new HashSet<>(sites))
-                //.supervisor(supervisor)
                 .startTime(startDateTime)
                 .endTime(endDateTime)
                 .patrolType(Patrol.PatrolType.valueOf(request.getPatrolType()))
@@ -123,135 +112,141 @@ public class PatrolService {
                 .status(Patrol.PatrolStatus.SCHEDULED)
                 .notes(request.getNotes())
                 .active(request.getActive() != null ? request.getActive() : true)
+                .checkpoints(new HashSet<>())
                 .build();
 
-        // Create checkpoints for all patrol points in all sites
-        Set<PatrolCheckpoint> checkpoints = new HashSet<>();
-        for (Site site : sites) {
-            List<PatrolPoint> points = patrolPointRepository.findBySiteAndActive(site, true);
-            points.sort(Comparator.comparingInt(PatrolPoint::getSequenceNumber));
+        // Save patrol first to get the ID
+        Patrol savedPatrol = patrolRepository.save(patrol);
+        log.info("Created patrol with ID: {}", savedPatrol.getId());
 
-            for (PatrolPoint point : points) {
-                PatrolCheckpoint checkpoint = PatrolCheckpoint.builder()
-                        .patrol(patrol)
-                        .patrolPoint(point)
-                        .latitude(point.getLatitude())
-                        .longitude(point.getLongitude())
-                        .build();
-                checkpoints.add(checkpoint);
-            }
+        // Create ONE patrol point and checkpoint for each site
+        Set<PatrolCheckpoint> checkpoints = new HashSet<>();
+
+        for (Site site : sites) {
+            log.info("Creating patrol point for site: {}", site.getName());
+
+            // Create ONE patrol point for this site using site's coordinates
+            PatrolPoint patrolPoint = PatrolPoint.builder()
+                    .site(site)
+                    .name("Checkpoint - " + site.getName())
+                    .description("Security checkpoint for " + site.getName())
+                    .latitude(site.getLatitude())
+                    .longitude(site.getLongitude())
+                    .sequenceNumber(1)
+                    .active(true)
+                    .build();
+
+            // Save the patrol point
+            PatrolPoint savedPatrolPoint = patrolPointRepository.save(patrolPoint);
+            log.info("Created patrol point: {} for site: {}", savedPatrolPoint.getName(), site.getName());
+
+            // Create ONE checkpoint from this patrol point
+            PatrolCheckpoint checkpoint = PatrolCheckpoint.builder()
+                    .patrol(savedPatrol)
+                    .patrolPoint(savedPatrolPoint)
+                    .latitude(site.getLatitude())
+                    .longitude(site.getLongitude())
+                    // checkTime will be set when the checkpoint is actually visited
+                    .build();
+
+            checkpoints.add(checkpoint);
+            log.info("Created checkpoint for site: {}", site.getName());
         }
 
-        patrol.setCheckpoints(checkpoints);
-        Patrol savedPatrol = patrolRepository.save(patrol);
+        log.info("Created {} total checkpoints for patrol (one per site)", checkpoints.size());
 
-        // Send notification if supervisor is assigned
-//        if (supervisor != null) {
-//            sendPatrolAssignmentNotification(savedPatrol);
-//        }
+        // Set checkpoints on patrol and save again
+        savedPatrol.setCheckpoints(checkpoints);
+        Patrol finalPatrol = patrolRepository.save(savedPatrol);
 
-        return mapToDto(savedPatrol);
+        log.info("Saved patrol with {} checkpoints", finalPatrol.getCheckpoints().size());
+
+        return mapToDto(finalPatrol);
     }
 
-    @Transactional
-    public BulkPatrolResponse createBulkPatrols(BulkPatrolRequest request) {
-        List<PatrolDto> createdPatrols = new ArrayList<>();
-        List<String> warnings = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+    // Create patrol points from request
+    private List<PatrolPoint> createPatrolPointsFromRequest(Site site,
+                                                            List<CreatePatrolRequest.PatrolPointRequest> pointRequests) {
+        List<PatrolPoint> patrolPoints = new ArrayList<>();
 
-        try {
-            // Validate all supervisors first
-            Map<Long, User> supervisorMap = new HashMap<>();
-            for (Long supervisorId : request.getSupervisorIds()) {
-                try {
-                    User supervisor = userRepository.findById(supervisorId)
-                            .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + supervisorId));
+        for (CreatePatrolRequest.PatrolPointRequest pointRequest : pointRequests) {
+            PatrolPoint patrolPoint = PatrolPoint.builder()
+                    .site(site)
+                    .name(pointRequest.getName())
+                    .description(pointRequest.getDescription())
+                    .latitude(pointRequest.getLatitude())
+                    .longitude(pointRequest.getLongitude())
+                    .sequenceNumber(pointRequest.getSequenceNumber())
+                    .expectedCheckTime(pointRequest.getExpectedCheckTime())
+                    .active(true)
+                    .build();
 
-                    if (!isSupervisor(supervisor)) {
-                        errors.add("User " + supervisor.getFirstName() + " " + supervisor.getLastName() + " is not a supervisor");
-                        continue;
-                    }
-                    supervisorMap.put(supervisorId, supervisor);
-                } catch (Exception e) {
-                    errors.add("Error processing supervisor ID " + supervisorId + ": " + e.getMessage());
-                }
-            }
-
-            if (supervisorMap.isEmpty()) {
-                throw new IllegalArgumentException("No valid supervisors found for assignment");
-            }
-
-            // Validate sites exist
-            List<Site> sites = siteRepository.findAllById(request.getSiteIds());
-            if (sites.size() != request.getSiteIds().size()) {
-                throw new ResourceNotFoundException("One or more sites not found");
-            }
-
-            // Create patrols for each supervisor
-            for (User supervisor : supervisorMap.values()) {
-                try {
-                    // Parse times
-                    LocalTime startTime = LocalTime.parse(request.getStartTime());
-                    LocalTime endTime = LocalTime.parse(request.getEndTime());
-                    LocalDateTime startDateTime = LocalDateTime.of(LocalDate.now(), startTime);
-                    LocalDateTime endDateTime = LocalDateTime.of(LocalDate.now(), endTime);
-
-                    Patrol patrol = Patrol.builder()
-                            .name(request.getName())
-                            .description(request.getDescription())
-                            .primarySite(sites.get(0))
-                            .sites(new HashSet<>(sites))
-                            //.supervisor(supervisor)
-                            .startTime(startDateTime)
-                            .endTime(endDateTime)
-                            .patrolType(Patrol.PatrolType.valueOf(request.getPatrolType()))
-                            .requiredSupervisors(request.getRequiredSupervisors())
-                            .colorCode(request.getColorCode())
-                            .status(Patrol.PatrolStatus.SCHEDULED)
-                            .notes(request.getNotes())
-                            .active(request.getActive() != null ? request.getActive() : true)
-                            .build();
-
-                    Patrol savedPatrol = patrolRepository.save(patrol);
-
-                    // Create checkpoints
-                    Set<PatrolCheckpoint> checkpoints = new HashSet<>();
-                    for (Site site : sites) {
-                        List<PatrolPoint> points = patrolPointRepository.findBySiteAndActive(site, true);
-                        points.sort(Comparator.comparingInt(PatrolPoint::getSequenceNumber));
-
-                        for (PatrolPoint point : points) {
-                            PatrolCheckpoint checkpoint = PatrolCheckpoint.builder()
-                                    .patrol(savedPatrol)
-                                    .patrolPoint(point)
-                                    .latitude(point.getLatitude())
-                                    .longitude(point.getLongitude())
-                                    .build();
-                            checkpoints.add(checkpoint);
-                        }
-                    }
-
-                    savedPatrol.setCheckpoints(checkpoints);
-                    Patrol finalPatrol = patrolRepository.save(savedPatrol);
-                    createdPatrols.add(mapToDto(finalPatrol));
-
-//                    sendPatrolAssignmentNotification(finalPatrol);
-
-                } catch (Exception e) {
-                    errors.add("Failed to create patrol for supervisor " +
-                            supervisor.getFirstName() + " " + supervisor.getLastName() + ": " + e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            errors.add("System error: " + e.getMessage());
+            patrolPoints.add(patrolPoint);
         }
 
-        return BulkPatrolResponse.builder()
-                .createdPatrols(createdPatrols)
-                .warnings(warnings)
-                .errors(errors)
-                .totalPatrolsCreated(createdPatrols.size())
+        // Save all patrol points
+        List<PatrolPoint> savedPatrolPoints = patrolPointRepository.saveAll(patrolPoints);
+        log.info("Saved {} custom patrol points for site {}", savedPatrolPoints.size(), site.getName());
+
+        return savedPatrolPoints;
+    }
+
+    // Helper method to create default patrol points for a site (keep the previous implementation)
+    private List<PatrolPoint> createDefaultPatrolPointsForSite(Site site, Patrol patrol) {
+        List<PatrolPoint> patrolPoints = new ArrayList<>();
+
+        PatrolPoint entrancePoint = PatrolPoint.builder()
+                .site(site)
+                .name("Main Entrance - " + patrol.getName())
+                .description("Main entrance checkpoint for " + site.getName())
+                .latitude(site.getLatitude() != null ? site.getLatitude() : 0.0)
+                .longitude(site.getLongitude() != null ? site.getLongitude() : 0.0)
+                .sequenceNumber(1)
+                .active(true)
                 .build();
+
+        PatrolPoint perimeterPoint = PatrolPoint.builder()
+                .site(site)
+                .name("Perimeter Check - " + patrol.getName())
+                .description("Perimeter checkpoint for " + site.getName())
+                .latitude(site.getLatitude() != null ? site.getLatitude() + 0.001 : 0.001)
+                .longitude(site.getLongitude() != null ? site.getLongitude() + 0.001 : 0.001)
+                .sequenceNumber(2)
+                .active(true)
+                .build();
+
+        PatrolPoint exitPoint = PatrolPoint.builder()
+                .site(site)
+                .name("Exit Point - " + patrol.getName())
+                .description("Exit checkpoint for " + site.getName())
+                .latitude(site.getLatitude() != null ? site.getLatitude() - 0.001 : -0.001)
+                .longitude(site.getLongitude() != null ? site.getLongitude() - 0.001 : -0.001)
+                .sequenceNumber(3)
+                .active(true)
+                .build();
+
+        patrolPoints.add(entrancePoint);
+        patrolPoints.add(perimeterPoint);
+        patrolPoints.add(exitPoint);
+
+        // Save all patrol points
+        List<PatrolPoint> savedPatrolPoints = patrolPointRepository.saveAll(patrolPoints);
+        log.info("Saved {} default patrol points for site {}", savedPatrolPoints.size(), site.getName());
+
+        return savedPatrolPoints;
+    }
+        private LocalTime parseTimeFromString(String timeString) {
+        try {
+            // First try parsing as LocalTime (HH:mm or HH:mm:ss)
+            return LocalTime.parse(timeString);
+        } catch (DateTimeParseException e) {
+            try {
+                // If that fails, try parsing as ISO datetime and extract time
+                return LocalDateTime.parse(timeString).toLocalTime();
+            } catch (DateTimeParseException e2) {
+                throw new IllegalArgumentException("Time must be in HH:mm, HH:mm:ss, or ISO datetime format");
+            }
+        }
     }
 
     @Transactional
@@ -363,7 +358,6 @@ public class PatrolService {
         Patrol updatedPatrol = patrolRepository.save(patrol);
         return mapToDto(updatedPatrol);
     }
-
 
 
     private PatrolAssignment.PatrolAssignmentStatus mapPatrolStatusToAssignmentStatus(Patrol.PatrolStatus status) {
@@ -510,6 +504,8 @@ public class PatrolService {
                 .completedAt(assignment.getCompletedAt())
                 .createdAt(assignment.getCreatedAt())
                 .updatedAt(assignment.getUpdatedAt())
+                .assignmentDate(assignment.getAssignmentDate())
+                .assignmentDate(assignment.getAssignmentDate())
                 .patrolDetails(mapToDto(assignment.getPatrol()))
                 .build();
     }
@@ -536,195 +532,6 @@ public class PatrolService {
     }
 
 
-    @Transactional
-    public BulkPatrolAssignmentResponse createBulkPatrolAssignments(BulkPatrolAssignmentRequest request) {
-        List<PatrolAssignmentDto> createdAssignments = new ArrayList<>();
-        List<String> warnings = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
-        Map<Long, List<PatrolAssignment>> supervisorAssignments = new HashMap<>();
-
-        try {
-            // Validate patrol exists
-            Patrol patrol = patrolRepository.findById(request.getPatrolId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Patrol not found with id: " + request.getPatrolId()));
-
-            // Validate and map supervisors
-            Map<Long, User> supervisorMap = new HashMap<>();
-            Map<Long, String> originalPatrolTypes = new HashMap<>();
-
-            for (BulkPatrolAssignmentRequest.PatrolAssignment sa : request.getSupervisorAssignments()) {
-                try {
-                    User user = userRepository.findById(sa.getSupervisorId())
-                            .orElseThrow(() -> new ResourceNotFoundException("User not found: " + sa.getSupervisorId()));
-
-                    if (!user.getRoles().stream().anyMatch(r -> r.getName().toString().equals("ROLE_SUPERVISOR"))) {
-                        errors.add("User " + user.getUsername() + " is not a supervisor");
-                        continue;
-                    }
-
-                    supervisorMap.put(sa.getSupervisorId(), user);
-                    supervisorAssignments.put(user.getId(), new ArrayList<>());
-                    originalPatrolTypes.put(sa.getSupervisorId(), sa.getPatrolType());
-                } catch (Exception e) {
-                    errors.add("Error processing supervisor ID " + sa.getSupervisorId() + ": " + e.getMessage());
-                }
-            }
-
-            if (supervisorMap.isEmpty()) {
-                throw new IllegalArgumentException("No valid supervisors found");
-            }
-
-            // Rotation setup
-            boolean rotationEnabled = request.getRotationConfig() != null &&
-                    request.getRotationConfig().isEnableRotation();
-            int rotationInterval = rotationEnabled ?
-                    request.getRotationConfig().getRotationIntervalWeeks() : 0;
-            String rotationType = rotationEnabled ?
-                    request.getRotationConfig().getRotationType() : null;
-
-            LocalDate currentDate = request.getStartDate();
-            int weekCounter = 0;
-
-            while (!currentDate.isAfter(request.getEndDate())) {
-                // Determine if we should rotate this week
-                boolean shouldRotate = rotationEnabled &&
-                        (rotationInterval > 0) &&
-                        ((weekCounter / rotationInterval) % 2 == 1);
-
-                if (shouldRotate) {
-                    log.info("Applying rotation for week {}", weekCounter);
-                }
-
-                // Process each supervisor assignment
-                for (BulkPatrolAssignmentRequest.PatrolAssignment sa : request.getSupervisorAssignments()) {
-                    if (!supervisorMap.containsKey(sa.getSupervisorId())) continue;
-
-                    User supervisor = supervisorMap.get(sa.getSupervisorId());
-                    int dayOfWeek = currentDate.getDayOfWeek().getValue();
-
-                    // Skip if not assigned for this day
-                    if (sa.getDaysOfWeek() != null && !sa.getDaysOfWeek().contains(dayOfWeek)) {
-                        continue;
-                    }
-
-                    try {
-                        // Check for existing assignment
-                        Optional<PatrolAssignment> existing = assignmentRepository
-                                .findByPatrolIdAndSupervisorIdAndAssignedAtBetween(
-                                        patrol.getId(),
-                                        supervisor.getId(),
-                                        currentDate.atStartOfDay(),
-                                        currentDate.plusDays(1).atStartOfDay());
-
-                        if (existing.isPresent() && !request.isOverrideExisting()) {
-                            warnings.add("Assignment exists for " + supervisor.getUsername() +
-                                    " on " + currentDate + " - skipped");
-                            continue;
-                        }
-
-                        // Determine patrol type (apply rotation if needed)
-                        String patrolType = sa.getPatrolType();
-                        if (shouldRotate && "PATROL_TYPE".equals(rotationType)) {
-                            // Find the rotated patrol type
-                            String rotatedType = getRotatedPatrolType(originalPatrolTypes.get(sa.getSupervisorId()));
-
-                            // Find another supervisor with the rotated type to get times
-                            for (BulkPatrolAssignmentRequest.PatrolAssignment otherSa : request.getSupervisorAssignments()) {
-                                if (rotatedType.equals(otherSa.getPatrolType())) {
-                                    patrolType = rotatedType;
-                                    log.info("Rotating supervisor {} from {} to {} patrol for date {}",
-                                            supervisor.getUsername(), sa.getPatrolType(), rotatedType, currentDate);
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Set times (with rotation applied if needed)
-                        LocalTime startTime = sa.getStartTime() != null ?
-                                LocalTime.parse(sa.getStartTime()) : patrol.getStartTime().toLocalTime();
-                        LocalTime endTime = sa.getEndTime() != null ?
-                                LocalTime.parse(sa.getEndTime()) : patrol.getEndTime().toLocalTime();
-
-                        // Create the assignment
-                        PatrolAssignment newAssignment = new PatrolAssignment();
-                        newAssignment.setPatrol(patrol);
-                        newAssignment.setSupervisor(supervisor);
-                        newAssignment.setAssignedAt(LocalDateTime.now());
-                        newAssignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.PENDING);
-                        newAssignment.setPatrolType(Patrol.PatrolType.valueOf(patrolType));
-                        newAssignment.setNotes(request.getNotes());
-
-                        LocalDateTime startDateTime = LocalDateTime.of(currentDate, startTime);
-                        LocalDateTime endDateTime = endTime.isBefore(startTime) ?
-                                LocalDateTime.of(currentDate.plusDays(1), endTime) :
-                                LocalDateTime.of(currentDate, endTime);
-
-                        newAssignment.setStartTime(startDateTime);
-                        newAssignment.setEndTime(endDateTime);
-
-                        PatrolAssignment savedAssignment = assignmentRepository.save(newAssignment);
-                        createdAssignments.add(mapToDto(savedAssignment));
-                        supervisorAssignments.get(supervisor.getId()).add(savedAssignment);
-
-                    } catch (Exception e) {
-                        errors.add("Failed to create assignment for " + supervisor.getUsername() +
-                                " on " + currentDate + ": " + e.getMessage());
-                        log.error("Assignment creation error", e);
-                    }
-                }
-
-                currentDate = currentDate.plusDays(1);
-
-                // Increment week counter on Mondays
-                if (currentDate.getDayOfWeek() == DayOfWeek.MONDAY) {
-                    weekCounter++;
-                }
-            }
-
-            sendConsolidatedPatrolNotifications(supervisorAssignments);
-
-        } catch (Exception e) {
-            errors.add("System error: " + e.getMessage());
-            log.error("Bulk assignment failed", e);
-        }
-
-        return BulkPatrolAssignmentResponse.builder()
-                .createdAssignments(createdAssignments)
-                .warnings(warnings)
-                .errors(errors)
-                .totalAssignmentsCreated(createdAssignments.size())
-                .summary("Created " + createdAssignments.size() + " assignments with " +
-                        warnings.size() + " warnings and " + errors.size() + " errors.")
-                .build();
-    }
-
-    // Helper method to rotate patrol types
-    private String getRotatedPatrolType(String originalType) {
-        if ("MORNING".equals(originalType)) return "EVENING";
-        if ("EVENING".equals(originalType)) return "MORNING";
-        if ("DAY".equals(originalType)) return "NIGHT";
-        if ("NIGHT".equals(originalType)) return "DAY";
-        return originalType; // default return if no match
-    }
-    private Patrol.PatrolType rotatePatrolType(Patrol.PatrolType currentType) {
-        switch (currentType) {
-            case MORNING: return Patrol.PatrolType.EVENING;
-            case EVENING: return Patrol.PatrolType.MORNING;
-            case AFTERNOON: return Patrol.PatrolType.NIGHT;
-            case NIGHT: return Patrol.PatrolType.AFTERNOON;
-            default: return currentType;
-        }
-    }
-
-    private LocalTime adjustTimeForPatrolType(LocalTime time, Patrol.PatrolType type) {
-        switch (type) {
-            case MORNING: return time.withHour(6).withMinute(0);
-            case AFTERNOON: return time.withHour(12).withMinute(0);
-            case EVENING: return time.withHour(18).withMinute(0);
-            case NIGHT: return time.withHour(0).withMinute(0);
-            default: return time;
-        }
-    }
 
     private Patrol createOrUpdatePatrolForAssignment(Patrol originalPatrol, LocalDateTime startTime, LocalDateTime endTime) {
         // For simplicity, we'll create a new patrol for each assignment

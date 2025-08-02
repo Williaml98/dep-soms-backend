@@ -22,4 +22,21 @@ public class CreatePatrolRequest {
     private String colorCode;
     private String notes;
     private Boolean active;
+
+    // Add patrol points to be created for each site
+    private List<PatrolPointRequest> patrolPoints;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PatrolPointRequest {
+        private Long siteId; // Which site this point belongs to
+        private String name;
+        private String description;
+        private Double latitude;
+        private Double longitude;
+        private Integer sequenceNumber;
+        private LocalTime expectedCheckTime; // Optional expected check time
+    }
 }

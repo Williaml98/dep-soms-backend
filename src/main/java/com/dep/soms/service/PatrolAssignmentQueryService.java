@@ -152,15 +152,19 @@ public class PatrolAssignmentQueryService {
                 .patrolId(assignment.getPatrol().getId())
                 .supervisor(mapToUserDto(assignment.getSupervisor()))  // Map supervisor to UserDto
                 .status(assignment.getStatus().toString())
+                .patrolId(assignment.getPatrol().getId())
+                .supervisorId(assignment.getSupervisor().getId())
+                .supervisorName(assignment.getSupervisor().getFirstName() + " " + assignment.getSupervisor().getLastName())
                 .assignedAt(assignment.getAssignedAt())
                 .acceptedAt(assignment.getAcceptedAt())
                 .declinedAt(assignment.getDeclinedAt())
                 .declineReason(assignment.getDeclineReason())
                 .completedAt(assignment.getCompletedAt())
                 .createdAt(assignment.getCreatedAt())
+                .assignmentDate(assignment.getAssignmentDate())
                 .updatedAt(assignment.getUpdatedAt())
                 .patrolDetails(mapToPatrolDto(assignment.getPatrol()))
-                .site(mapToSiteDto(assignment.getPatrol().getPrimarySite()))  // Map primary site to SiteDto
+                //.site(mapToSiteDto(assignment.getPatrol().getPrimarySite()))  // Map primary site to SiteDto
                 .build();
     }
 
