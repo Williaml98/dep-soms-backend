@@ -61,15 +61,6 @@ public interface PatrolAssignmentRepository extends JpaRepository<PatrolAssignme
     // Find all assignments between two dates
     List<PatrolAssignment> findByStartTimeBetween(LocalDateTime start, LocalDateTime end);
 
-    // Find assignments by supervisor
-//    List<PatrolAssignment> findBySupervisor(User supervisor);
-//
-//    // Find current in-progress assignments for a supervisor
-//    List<PatrolAssignment> findBySupervisorAndStatus(User supervisor, PatrolAssignment.PatrolAssignmentStatus status);
-//
-//    // Find assignment by patrol and supervisor
-//    Optional<PatrolAssignment> findByPatrolIdAndSupervisorId(Long patrolId, Long supervisorId);
-
     List<PatrolAssignment> findBySupervisorAndAssignmentDateBetween(User supervisor, LocalDate startDate, LocalDate endDate);
     List<PatrolAssignment> findBySupervisorAndAssignmentDateGreaterThanEqual(User supervisor, LocalDate date);
     List<PatrolAssignment> findBySupervisorAndAssignmentDateLessThanEqual(User supervisor, LocalDate date);
@@ -77,4 +68,19 @@ public interface PatrolAssignmentRepository extends JpaRepository<PatrolAssignme
     List<PatrolAssignment> findByPatrolAndAssignmentDate(Patrol patrol, LocalDate date);
     List<PatrolAssignment> findByPatrol(Patrol patrol);
     Optional<PatrolAssignment> findByPatrolIdAndSupervisorIdAndAssignmentDate(Long patrolId, Long supervisorId, LocalDate assignmentDate);
+
+
+
+    List<PatrolAssignment> findByAssignmentDateAndStatusInAndEndTimeBefore(
+            LocalDate assignmentDate,
+            List<PatrolAssignment.PatrolAssignmentStatus> statuses,
+            LocalDateTime endTime
+    );
+
+    List<PatrolAssignment> findByAssignmentDateAndStatusAndEndTimeIsNullAndStartTimeBefore(
+            LocalDate assignmentDate,
+            PatrolAssignment.PatrolAssignmentStatus status,
+            LocalDateTime endTime
+    );
+
 }

@@ -13,9 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -89,24 +87,7 @@ public class SupervisorPatrolService {
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
-    @Transactional
-    public PatrolAssignmentDto acceptAssignment(Long assignmentId, Long supervisorId) {
-        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + assignmentId));
 
-        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
-            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
-        }
-
-        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.PENDING) {
-            throw new IllegalStateException("Assignment can only be accepted from PENDING status");
-        }
-
-        assignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.ACCEPTED);
-        assignment.setAcceptedAt(LocalDateTime.now());
-
-        return mapToDto(assignmentRepository.save(assignment));
-    }
 
     @Transactional
     public PatrolAssignmentDto declineAssignment(Long assignmentId, Long supervisorId, String reason) {
@@ -128,44 +109,7 @@ public class SupervisorPatrolService {
         return mapToDto(assignmentRepository.save(assignment));
     }
 
-    @Transactional
-    public PatrolDto startPatrol(Long assignmentId, Long supervisorId, Double latitude, Double longitude) {
-        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + assignmentId));
 
-        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
-            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
-        }
-
-        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.ACCEPTED) {
-            throw new IllegalStateException("Patrol can only be started from ACCEPTED status");
-        }
-
-        Patrol patrol = assignment.getPatrol();
-
-        if (patrol.getStatus() != Patrol.PatrolStatus.SCHEDULED) {
-            throw new IllegalStateException("Patrol can only be started from SCHEDULED status");
-        }
-
-        patrol.setStatus(Patrol.PatrolStatus.IN_PROGRESS);
-        patrol.setActualStartTime(LocalDateTime.now());
-
-        // Record starting location for first checkpoint
-        if (latitude != null && longitude != null) {
-            Optional<PatrolCheckpoint> firstCheckpoint = patrol.getCheckpoints().stream()
-                    .filter(cp -> cp.getCheckTime() == null)
-                    .findFirst();
-
-            if (firstCheckpoint.isPresent()) {
-                PatrolCheckpoint checkpoint = firstCheckpoint.get();
-                checkpoint.setCheckTime(LocalDateTime.now());
-                checkpoint.setLatitude(latitude);
-                checkpoint.setLongitude(longitude);
-            }
-        }
-
-        return mapToDto(patrolRepository.save(patrol));
-    }
 
     @Transactional
     public PatrolDto updateCheckpoint(Long assignmentId, Long checkpointId, Long supervisorId, CheckpointUpdateRequest request) {
@@ -220,47 +164,7 @@ public class SupervisorPatrolService {
         return mapToDto(patrolRepository.save(patrol));
     }
 
-    @Transactional
-    public PatrolDto completePatrol(Long assignmentId, Long supervisorId, Double latitude, Double longitude, String notes) {
-        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + assignmentId));
 
-        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
-            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
-        }
-
-        Patrol patrol = assignment.getPatrol();
-
-        if (patrol.getStatus() != Patrol.PatrolStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Patrol can only be completed from IN_PROGRESS status");
-        }
-
-        // Mark any remaining checkpoints as completed with current location
-        if (latitude != null && longitude != null) {
-            patrol.getCheckpoints().stream()
-                    .filter(cp -> cp.getCheckTime() == null)
-                    .forEach(cp -> {
-                        cp.setCheckTime(LocalDateTime.now());
-                        cp.setLatitude(latitude);
-                        cp.setLongitude(longitude);
-                    });
-        }
-
-        patrol.setStatus(Patrol.PatrolStatus.COMPLETED);
-        patrol.setActualEndTime(LocalDateTime.now());
-        assignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.COMPLETED);
-        assignment.setCompletedAt(LocalDateTime.now());
-
-        if (notes != null && !notes.isEmpty()) {
-            patrol.setNotes(patrol.getNotes() != null ?
-                    patrol.getNotes() + "\n" + notes : notes);
-        }
-
-        patrolRepository.save(patrol);
-        assignmentRepository.save(assignment);
-
-        return mapToDto(patrol);
-    }
 
     private PatrolDto mapToDto(Patrol patrol) {
         return PatrolDto.builder()
@@ -306,28 +210,7 @@ public class SupervisorPatrolService {
                 .build();
     }
 
-//    private PatrolAssignmentDto mapToDto(PatrolAssignment assignment) {
-//        return PatrolAssignmentDto.builder()
-//                .id(assignment.getId())
-//                .patrolId(assignment.getPatrol().getId())
-//                .patrolDetails(mapToDto(assignment.getPatrol()))
-//                .supervisorId(assignment.getSupervisor().getId())
-//                .supervisorName(assignment.getSupervisor().getFirstName() + " " + assignment.getSupervisor().getLastName())
-//                .status(assignment.getStatus().toString())
-//                //.patrolType(assignment.getPatrolType() != null ? assignment.getPatrolType().toString() : null)
-//                .assignedAt(assignment.getAssignedAt())
-//                .acceptedAt(assignment.getAcceptedAt())
-//                .declinedAt(assignment.getDeclinedAt())
-//                .declineReason(assignment.getDeclineReason())
-//                .completedAt(assignment.getCompletedAt())
-//                .assignmentDate(assignment.getAssignmentDate())
-//                //.startTime(assignment.getStartTime())
-//                //.endTime(assignment.getEndTime())
-//                //.notes(assignment.getNotes())
-//                .createdAt(assignment.getCreatedAt())
-//                .updatedAt(assignment.getUpdatedAt())
-//                .build();
-//    }
+
 
     private PatrolAssignmentDto mapToDto(PatrolAssignment assignment) {
         return PatrolAssignmentDto.builder()
@@ -371,5 +254,303 @@ public class SupervisorPatrolService {
         return assignmentRepository.findBySupervisor(supervisor).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
+    }
+
+
+
+    @Transactional
+    public PatrolAssignmentDto acceptAssignment(Long assignmentId, Long supervisorId) {
+        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + assignmentId));
+
+        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
+            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
+        }
+
+        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.PENDING) {
+            throw new IllegalStateException("Assignment can only be accepted from PENDING status");
+        }
+
+        assignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.ACCEPTED);
+        assignment.setAcceptedAt(LocalDateTime.now());
+
+        return mapToDto(assignmentRepository.save(assignment));
+    }
+
+    @Transactional
+    public PatrolAssignmentDto startPatrol(Long assignmentId, Long supervisorId, Double latitude, Double longitude) {
+        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + assignmentId));
+
+        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
+            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
+        }
+
+        // Only allow starting from ACCEPTED status
+        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.ACCEPTED) {
+            throw new IllegalStateException("Patrol can only be started from ACCEPTED status");
+        }
+
+        // Update assignment status to IN_PROGRESS
+        assignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.IN_PROGRESS);
+        assignment.setStartTime(LocalDateTime.now()); // Record when patrol actually started
+        assignment = assignmentRepository.save(assignment);
+
+        // Update the patrol status if needed
+        Patrol patrol = assignment.getPatrol();
+        if (patrol.getStatus() == Patrol.PatrolStatus.SCHEDULED) {
+            patrol.setStatus(Patrol.PatrolStatus.IN_PROGRESS);
+            patrol.setActualStartTime(LocalDateTime.now());
+            patrolRepository.save(patrol);
+        }
+
+        // Record starting location for first checkpoint if coordinates provided
+        if (latitude != null && longitude != null) {
+            patrol.getCheckpoints().stream()
+                    .filter(cp -> cp.getCheckTime() == null)
+                    .findFirst()
+                    .ifPresent(cp -> {
+                        cp.setCheckTime(LocalDateTime.now());
+                        cp.setLatitude(latitude);
+                        cp.setLongitude(longitude);
+                    });
+        }
+
+        return mapToDto(assignment);
+    }
+    @Transactional
+    public PatrolDto completePatrol(Long assignmentId, Long supervisorId, Double latitude, Double longitude, String notes) {
+        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + assignmentId));
+
+        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
+            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
+        }
+
+        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Patrol can only be completed from IN_PROGRESS status");
+        }
+
+        Patrol patrol = assignment.getPatrol();
+
+        // Mark any remaining checkpoints as completed with current location
+        if (latitude != null && longitude != null) {
+            patrol.getCheckpoints().stream()
+                    .filter(cp -> cp.getCheckTime() == null)
+                    .forEach(cp -> {
+                        cp.setCheckTime(LocalDateTime.now());
+                        cp.setLatitude(latitude);
+                        cp.setLongitude(longitude);
+                    });
+        }
+
+        // Update assignment status to COMPLETED
+        assignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.COMPLETED);
+        assignment.setCompletedAt(LocalDateTime.now());
+        assignmentRepository.save(assignment);
+
+        if (notes != null && !notes.isEmpty()) {
+            patrol.setNotes(patrol.getNotes() != null ?
+                    patrol.getNotes() + "\n" + notes : notes);
+        }
+
+        return mapToDto(patrolRepository.save(patrol));
+    }
+
+//    @Transactional
+//    public SiteCheckResponse checkSite(Long assignmentId, Long siteId, Long supervisorId, SiteCheckRequest request) {
+//        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+//
+//        // Verify assignment belongs to supervisor
+//        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
+//            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
+//        }
+//
+//        // Verify patrol is in progress
+//        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.IN_PROGRESS) {
+//            throw new IllegalStateException("Patrol must be in progress to check sites");
+//        }
+//
+//        // Find the patrol point for this site
+//        PatrolPoint patrolPoint = assignment.getPatrol().getCheckpoints().stream()
+//                .map(PatrolCheckpoint::getPatrolPoint)
+//                .filter(point -> point.getSite().getId().equals(siteId))
+//                .findFirst()
+//                .orElseThrow(() -> new ResourceNotFoundException("No patrol point found for site"));
+//
+//        // Calculate distance
+//        double distance = locationService.getDistanceInMeters(
+//                request.getLatitude(),
+//                request.getLongitude(),
+//                patrolPoint.getLatitude(),
+//                patrolPoint.getLongitude()
+//        );
+//
+//        boolean isAtCorrectLocation = distance <= 100; // 100m threshold example
+//
+//        // Find existing checkpoint or create new one
+//        Optional<PatrolCheckpoint> existingCheckpoint = assignment.getPatrol().getCheckpoints().stream()
+//                .filter(cp -> cp.getPatrolPoint().getId().equals(patrolPoint.getId()))
+//                .findFirst();
+//
+//        PatrolCheckpoint checkpoint;
+//        if (existingCheckpoint.isPresent()) {
+//            checkpoint = existingCheckpoint.get();
+//            checkpoint.setCheckTime(LocalDateTime.now());
+//            checkpoint.setLatitude(request.getLatitude());
+//            checkpoint.setLongitude(request.getLongitude());
+//            checkpoint.setNotes(request.getNotes());
+//            checkpoint.setLocationVerified(isAtCorrectLocation);
+//            checkpoint.setDistanceFromExpected(distance);
+//        } else {
+//            checkpoint = new PatrolCheckpoint();
+//            checkpoint.setPatrol(assignment.getPatrol());
+//            checkpoint.setPatrolPoint(patrolPoint);
+//            checkpoint.setCheckTime(LocalDateTime.now());
+//            checkpoint.setLatitude(request.getLatitude());
+//            checkpoint.setLongitude(request.getLongitude());
+//            checkpoint.setNotes(request.getNotes());
+//            checkpoint.setLocationVerified(isAtCorrectLocation);
+//            checkpoint.setDistanceFromExpected(distance);
+//            assignment.getPatrol().getCheckpoints().add(checkpoint);
+//        }
+//
+//        patrolRepository.save(assignment.getPatrol());
+//
+//        // Return response
+//        SiteCheckResponse response = new SiteCheckResponse();
+//        response.setVerified(isAtCorrectLocation);
+//        response.setDistance(distance);
+//        response.setMessage(isAtCorrectLocation ?
+//                "Site checked successfully" :
+//                "Location verification failed (Distance: " + Math.round(distance) + "m)");
+//        response.setAssignment(mapToDto(assignment));
+//
+//        return response;
+//    }
+
+
+    @Transactional
+    public SiteCheckResponse checkSite(Long assignmentId, Long siteId, Long supervisorId, SiteCheckRequest request) {
+        PatrolAssignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
+
+        // Verify assignment belongs to supervisor
+        if (!assignment.getSupervisor().getId().equals(supervisorId)) {
+            throw new IllegalArgumentException("This assignment doesn't belong to the current supervisor");
+        }
+
+        // Verify assignment is in progress
+        if (assignment.getStatus() != PatrolAssignment.PatrolAssignmentStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Assignment must be in progress to check sites");
+        }
+
+        Patrol patrol = assignment.getPatrol();
+
+        // Find the patrol point for this site
+        PatrolPoint patrolPoint = patrol.getCheckpoints().stream()
+                .map(PatrolCheckpoint::getPatrolPoint)
+                .filter(point -> point.getSite().getId().equals(siteId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("No patrol point found for site"));
+
+        // Calculate distance
+        double distance = locationService.getDistanceInMeters(
+                request.getLatitude(),
+                request.getLongitude(),
+                patrolPoint.getLatitude(),
+                patrolPoint.getLongitude()
+        );
+
+        boolean isAtCorrectLocation = distance <= 100; // 100m threshold example
+
+        // Find existing checkpoint or create new one
+        Optional<PatrolCheckpoint> existingCheckpoint = patrol.getCheckpoints().stream()
+                .filter(cp -> cp.getPatrolPoint().getId().equals(patrolPoint.getId()))
+                .findFirst();
+
+        PatrolCheckpoint checkpoint;
+        if (existingCheckpoint.isPresent()) {
+            checkpoint = existingCheckpoint.get();
+            checkpoint.setCheckTime(LocalDateTime.now());
+            checkpoint.setLatitude(request.getLatitude());
+            checkpoint.setLongitude(request.getLongitude());
+            checkpoint.setNotes(request.getNotes());
+            checkpoint.setLocationVerified(isAtCorrectLocation);
+            checkpoint.setDistanceFromExpected(distance);
+        } else {
+            checkpoint = new PatrolCheckpoint();
+            checkpoint.setPatrol(patrol);
+            checkpoint.setPatrolPoint(patrolPoint);
+            checkpoint.setCheckTime(LocalDateTime.now());
+            checkpoint.setLatitude(request.getLatitude());
+            checkpoint.setLongitude(request.getLongitude());
+            checkpoint.setNotes(request.getNotes());
+            checkpoint.setLocationVerified(isAtCorrectLocation);
+            checkpoint.setDistanceFromExpected(distance);
+            patrol.getCheckpoints().add(checkpoint);
+        }
+
+        // Save the checkpoint
+        patrolRepository.save(patrol);
+
+        // Check if all sites have been checked
+        if (allSitesChecked(patrol)) {
+            completeAssignmentAutomatically(assignment, request.getLatitude(), request.getLongitude(), request.getNotes());
+        }
+
+        // Return response
+        SiteCheckResponse response = new SiteCheckResponse();
+        response.setVerified(isAtCorrectLocation);
+        response.setDistance(distance);
+        response.setMessage(isAtCorrectLocation ?
+                "Site checked successfully" :
+                "Location verification failed (Distance: " + Math.round(distance) + "m)");
+        response.setAssignment(mapToDto(assignment));
+
+        return response;
+    }
+
+    private boolean allSitesChecked(Patrol patrol) {
+        // Get all unique sites from this patrol (primary + additional)
+        Set<Long> allSiteIds = new HashSet<>();
+        allSiteIds.add(patrol.getPrimarySite().getId());
+        patrol.getSites().forEach(site -> allSiteIds.add(site.getId()));
+
+        // Check if all sites have at least one checked checkpoint
+        return allSiteIds.stream().allMatch(siteId ->
+                patrol.getCheckpoints().stream()
+                        .filter(cp -> cp.getPatrolPoint() != null && cp.getPatrolPoint().getSite() != null)
+                        .anyMatch(cp -> cp.getPatrolPoint().getSite().getId().equals(siteId) &&
+                                cp.getCheckTime() != null)
+        );
+    }
+
+    private void completeAssignmentAutomatically(PatrolAssignment assignment, Double latitude, Double longitude, String notes) {
+        // Update assignment status to COMPLETED
+        assignment.setStatus(PatrolAssignment.PatrolAssignmentStatus.COMPLETED);
+        assignment.setCompletedAt(LocalDateTime.now());
+
+        // Add completion notes if provided
+        if (notes != null && !notes.isEmpty()) {
+            assignment.setNotes(assignment.getNotes() != null ?
+                    assignment.getNotes() + "\n" + notes : notes);
+        }
+
+        assignmentRepository.save(assignment);
+
+        // Optionally mark any remaining checkpoints as completed
+        Patrol patrol = assignment.getPatrol();
+        if (latitude != null && longitude != null) {
+            patrol.getCheckpoints().stream()
+                    .filter(cp -> cp.getCheckTime() == null)
+                    .forEach(cp -> {
+                        cp.setCheckTime(LocalDateTime.now());
+                        cp.setLatitude(latitude);
+                        cp.setLongitude(longitude);
+                    });
+            patrolRepository.save(patrol);
+        }
     }
 }

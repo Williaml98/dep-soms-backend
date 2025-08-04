@@ -98,4 +98,10 @@ public class PatrolCheckpoint {
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "location_verified")
+    private Boolean locationVerified;
+
+    @Column(name = "distance_from_expected")
+    private Double distanceFromExpected;
 }

@@ -80,6 +80,9 @@ public class PatrolAssignment {
         PENDING,
         ACCEPTED,
         DECLINED,
-        COMPLETED
+        COMPLETED,
+        IN_PROGRESS,
+        MISSED,
+        INCOMPLETE
     }
 }

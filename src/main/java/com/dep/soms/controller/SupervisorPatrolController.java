@@ -136,6 +136,7 @@ package com.dep.soms.controller;
 
 import com.dep.soms.dto.patrol.*;
 import com.dep.soms.service.SupervisorPatrolService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -183,15 +184,17 @@ public class SupervisorPatrolController {
         return ResponseEntity.ok(assignment);
     }
 
+
     @PostMapping("/assignments/{assignmentId}/start")
     @PreAuthorize("hasRole('SUPERVISOR')")
-    public ResponseEntity<PatrolDto> startPatrol(
+    public ResponseEntity<PatrolAssignmentDto> startPatrol(
             @PathVariable Long assignmentId,
             @RequestParam Long supervisorId,
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude) {
-        PatrolDto patrol = supervisorPatrolService.startPatrol(assignmentId, supervisorId, latitude, longitude);
-        return ResponseEntity.ok(patrol);
+
+        PatrolAssignmentDto assignment = supervisorPatrolService.startPatrol(assignmentId, supervisorId, latitude, longitude);
+        return ResponseEntity.ok(assignment);
     }
 
     @PostMapping("/assignments/{assignmentId}/checkpoints/{checkpointId}")
@@ -232,14 +235,6 @@ public class SupervisorPatrolController {
         return ResponseEntity.ok(patrols);
     }
 
-    // Get patrols assigned to current supervisor
-//    @GetMapping("/my-patrols")
-//    @PreAuthorize("hasRole('SUPERVISOR')")
-//    public ResponseEntity<List<PatrolDto>> getMyPatrols(
-//            @RequestParam Long supervisorId) {
-//        List<PatrolDto> patrols = supervisorPatrolService.getPatrolsBySupervisor(supervisorId);
-//        return ResponseEntity.ok(patrols);
-//    }
 
     @GetMapping("/my-patrols")
     @PreAuthorize("hasRole('SUPERVISOR')")
@@ -255,5 +250,38 @@ public class SupervisorPatrolController {
             @RequestParam Long supervisorId) {
         List<PatrolAssignmentDto> assignments = supervisorPatrolService.getInProgressAssignments(supervisorId);
         return ResponseEntity.ok(assignments);
+    }
+
+//    @PostMapping("/{assignmentId}/sites/{siteId}/check")
+//    @PreAuthorize("hasRole('SUPERVISOR')")
+//    public ResponseEntity<SiteCheckResponse> checkSite(
+//            @PathVariable Long assignmentId,
+//            @PathVariable Long siteId,
+//            @RequestParam Long supervisorId,
+//            @Valid @RequestBody SiteCheckRequest request) {
+//        SiteCheckResponse response = supervisorPatrolService.checkSite(assignmentId, siteId, supervisorId, request);
+//        return ResponseEntity.ok(response);
+//    }
+
+    @PostMapping("/assignments/{assignmentId}/sites/{siteId}/check")
+    @PreAuthorize("hasRole('SUPERVISOR')")
+    public ResponseEntity<SiteCheckResponse> checkSite(
+            @PathVariable Long assignmentId,
+            @PathVariable Long siteId,
+            @RequestParam Long supervisorId,
+            @RequestBody @Valid SiteCheckRequest request) {
+
+        logger.info("CheckSite request - assignmentId: {}, siteId: {}, supervisorId: {}",
+                assignmentId, siteId, supervisorId);
+        logger.debug("Request body: {}", request);
+
+        try {
+            SiteCheckResponse response = supervisorPatrolService.checkSite(
+                    assignmentId, siteId, supervisorId, request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error in checkSite endpoint", e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }
